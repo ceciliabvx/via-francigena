@@ -19,25 +19,21 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--ink); font-family: 'DM Sans', sans-serif; font-weight: 300; min-height: 100vh; -webkit-font-smoothing: antialiased; }
-    .page { max-width: 1024px; margin: 0 auto; padding: 0 28px 80px; }
+    .page { max-width: 1024px; margin: 0 auto; padding: 0 28px 30px; }
 
-    /* ── HERO compact ── */
     .hero {
       padding: 28px 0 20px;
       border-bottom: 1px solid var(--border);
       margin-bottom: 20px;
     }
 
-    /* Ligne 1 : eyebrow */
     .hero-eyebrow {
       display: inline-flex; align-items: center; gap: 8px;
       font-size: 11px; font-weight: 500; letter-spacing: 0.2em;
       text-transform: uppercase; color: var(--terra-mid);
       margin-bottom: 8px;
     }
-    .hero-eyebrow::before { content:''; display:block; width:24px; height:1px; background:var(--terra-mid); }
 
-    /* Ligne 2 : titre + bouton Polarsteps alignés */
     .hero-title-row {
       display: flex;
       align-items: center;
@@ -65,7 +61,6 @@
     .ps-dot { width: 7px; height: 7px; border-radius: 50%; background: #7FE09A; animation: blink 2s infinite; flex-shrink: 0; }
     @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-    /* Ligne 3 : sous-titre + countdown alignés */
     .hero-bottom-row {
       display: flex;
       align-items: center;
@@ -75,7 +70,6 @@
     }
     .hero-sub { font-size: 13px; color: var(--ink-muted); line-height: 1.6; }
 
-    /* Countdown inline compact */
     .countdown {
       display: flex; align-items: center; gap: 8px;
       flex-shrink: 0; flex-wrap: wrap;
@@ -199,16 +193,59 @@
 
     .loading { padding: 48px 0; text-align: center; color: var(--ink-faint); font-size: 14px; font-style: italic; font-family: 'Cormorant Garamond', serif; }
     .error-box { padding: 20px; background: var(--terra-light); border: 1px solid #DDB8A8; border-radius: 8px; color: var(--terra-text); font-size: 13px; line-height: 1.7; margin: 20px 0; }
-    .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--ink-faint); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--ink-faint); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
     .footer a { color: var(--terra-mid); text-decoration: none; }
 
-    @media (max-width: 640px) {
-      .hero-title-row { flex-direction: column; align-items: flex-start; }
-      .hero-bottom-row { flex-direction: column; align-items: flex-start; }
-      .row { grid-template-columns: 84px 1fr 50px; }
+    @media (max-width: 768px) {
+      /* PAGE */
+      .page { padding: 0 16px 24px; }
+
+      /* HERO */
+      .hero { padding: 20px 0 16px; }
+      .hero-title-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .hero h1 { font-size: clamp(24px, 7vw, 34px); }
+      .hero-bottom-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .ps-link { width: 100%; justify-content: center; }
+      .countdown { width: 100%; justify-content: flex-start; }
+
+      /* FILTRES */
+      .filter-panel { padding: 14px; gap: 12px; }
+      .filter-row { flex-direction: column; gap: 10px; }
+      .filter-block { min-width: 0; width: 100%; }
+      .filter-block[style] { flex: 1 !important; min-width: 0 !important; width: 100% !important; }
+      .date-row { gap: 6px; }
+      input[type="date"] { font-size: 12px; padding: 8px 8px; }
+      .dispo-toggle { padding-top: 0 !important; }
+
+      /* ONGLETS */
+      .tab-btn { padding: 10px 12px; font-size: 12px; gap: 5px; }
+      .tab-btn svg { display: none; }
+
+      /* CARTE */
+      #map { height: 380px; border-radius: 8px; }
+
+      /* TABLEAU */
+      .row { grid-template-columns: 90px 1fr 48px; gap: 8px; padding: 8px 10px; }
       .row .badge { display: none; }
-      .filter-row { flex-direction: column; }
-      #map { height: 360px; }
+      .cc { font-size: 13px; }
+      .dc { font-size: 11px; }
+      .kc { font-size: 11px; }
+
+      /* CALENDRIER */
+      .cal-day { min-height: 44px; padding: 4px 2px; }
+      .cal-day-ville { font-size: 8px; -webkit-line-clamp: 1; }
+      .cal-day-num { font-size: 10px; margin-bottom: 2px; }
+      .cal-day-dot { width: 5px; height: 5px; top: 4px; right: 3px; }
+      .cal-day-header { font-size: 9px; }
+      .cal-month-title { font-size: 15px; }
+      .cal-legend { gap: 10px; }
+      .cal-legend-item { font-size: 11px; }
+
+      /* TOOLTIP → désactivé sur mobile, on utilise le tap */
+      .cal-tooltip { display: none !important; }
+
+      /* FOOTER */
+      .footer { flex-direction: column; align-items: center; text-align: center; gap: 4px; }
     }
   </style>
 </head>
@@ -275,9 +312,9 @@
           <input type="date" id="date-to" min="2026-04-27" max="2026-08-31" onchange="applyFilters()">
         </div>
       </div>
-      <div class="filter-block" style="min-width:120px; flex:0;">
+      <div class="filter-block" style="min-width:120px; flex:0;align-self: baseline;">
         <label>Disponibilité</label>
-        <div class="dispo-toggle" onclick="cycleDispoState()" style="padding-top:4px;">
+        <div class="dispo-toggle" onclick="cycleDispoState()" style="padding-top:8px;">
           <div class="dispo-track state-all" id="dispo-track">
             <div class="dispo-thumb"></div>
           </div>
@@ -435,7 +472,7 @@
       const gs = getStyle(e.groupe);
       const hasGroupe = e.groupe && e.groupe.trim() !== '';
       const markerColor = hasGroupe ? '#A84B2A' : '#2D5A3D';
-      const ring = hasGroupe ? 'box-shadow:0 0 0 3px #A84B2A44,0 1px 4px rgba(0,0,0,0.2);' : 'box-shadow:0 1px 3px rgba(0,0,0,0.15);';
+      const ring = 'box-shadow:0 1px 3px rgba(0,0,0,0.15);';
       const icon = L.divIcon({
         html: `<div style="width:10px;height:10px;border-radius:50%;background:${markerColor};border:2px solid white;${ring}"></div>`,
         className: '', iconAnchor: [5,5], popupAnchor: [0,-9],
@@ -662,6 +699,7 @@
             cell.addEventListener('mouseenter', ev => showTooltip(ev, etape));
             cell.addEventListener('mousemove', ev => moveTooltip(ev));
             cell.addEventListener('mouseleave', hideTooltip);
+            cell.addEventListener('touchstart', ev => { ev.preventDefault(); showTooltipMobile(etape, cell); }, { passive: false });
           }
         } else {
           cell.className = 'cal-day out-of-trip';
@@ -687,6 +725,19 @@
     moveTooltip(ev);
   }
   function moveTooltip(ev) { tooltip.style.left = (ev.clientX + 12) + 'px'; tooltip.style.top = (ev.clientY + 12) + 'px'; }
+  function showTooltipMobile(etape, cell) {
+    // On mobile, show inline info below the cell instead of fixed tooltip
+    document.querySelectorAll('.cal-day-mobile-info').forEach(el => el.remove());
+    const gs = getStyle(etape.groupe);
+    const hasGroupe = (etape.groupe||'').trim() !== '';
+    const badgeStyle = hasGroupe ? `background:${gs.bg};color:${gs.fg}` : 'background:#EDE8DF;color:#A89D8C';
+    const info = document.createElement('div');
+    info.className = 'cal-day-mobile-info';
+    info.style.cssText = 'grid-column:1/-1;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--ink-muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap;';
+    info.innerHTML = `<span style="font-weight:500;color:var(--ink)">${etape.ville}</span><span>${etape.date||''}</span>${etape.km ? `<span>${Math.round(etape.km)} km</span>` : ''}<span class="tt-badge" style="${badgeStyle}">${hasGroupe ? gs.label : 'Disponible'}</span>`;
+    cell.parentNode.insertBefore(info, cell.nextSibling);
+    setTimeout(() => { document.addEventListener('touchstart', () => { info.remove(); }, { once: true }); }, 100);
+  }
   function hideTooltip() { tooltip.style.display = 'none'; }
 
   /* ── PARSE DATE ── */
