@@ -86,7 +86,7 @@
     }
     .countdown-unit { font-size: 10px; font-weight: 500; color: var(--ink-faint); letter-spacing: 0.04em; }
     .countdown-sep { font-size: 13px; color: var(--border-light); font-weight: 300; }
-    .countdown-started { font-family: 'Cormorant Garamond', serif; font-size: 16px; font-style: italic; color: var(--terra-mid); }
+    .countdown-started { font-size: 14px; font-style: italic; color: var(--terra-mid); }
 
     /* FILTER PANEL */
     .filter-panel-body { overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; max-height: 0; opacity: 0; }
@@ -180,6 +180,8 @@
     .cal-day.has-etape { cursor: pointer; }
     .cal-day.has-etape:hover { border-color: var(--border); }
     .cal-day.empty, .cal-day.out-of-trip { background: transparent; }
+    .cal-day.today { outline: 2px solid var(--terra-mid); outline-offset: -2px; }
+    .cal-day.today .cal-day-num { color: var(--terra-mid) !important; font-weight: 700; }
     .cal-day.off { background: #EEEBE4; }
     .cal-day.off .cal-day-num { color: var(--ink-faint); }
     .cal-day.off .cal-day-ville { color: var(--ink-faint); font-size: 9px; }
@@ -393,7 +395,7 @@
   const SHEET_ID = '1D62yVNvtDb4CjFZKI-X1Zud_Ka5MWPE534Yv4y1hNMM';
   const SHEET_NAME = 'Sheet1';
   const GVZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
-  const DEPART = new Date('2026-04-27T07:37:00');
+  const DEPART = new Date('2026-04-27T08:30:00');
 
   const PALETTE = [
     { dot:'#2D5A3D', bg:'#E4EEE7', fg:'#1E3D28' },
@@ -445,18 +447,25 @@
     } else {
       const elapsed = Math.floor(-diff / 86400000);
       el.innerHTML = elapsed === 0
-        ? `<span class="countdown-started">C'est le grand départ aujourd'hui ! 🥾</span>`
-        : `<span class="countdown-started">En chemin depuis ${elapsed} jour${elapsed > 1 ? 's' : ''} 🥾</span>`;
+        ? `<span class="countdown-started">Jour J ➪ Direction Londres</span>🚂`
+        : `<span class="countdown-started">En chemin depuis ${elapsed} jour${elapsed > 1 ? 's' : ''}</span>;`
     }
   }
 
   /* ── TABS ── */
+  let mapBounds = null;
+
   function switchTab(name, btn) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + name).classList.add('active');
-    if (name === 'carte' && map) setTimeout(() => map.invalidateSize(), 100);
+    if (name === 'carte' && map) {
+      setTimeout(() => {
+        map.invalidateSize();
+        if (mapBounds) map.fitBounds(mapBounds, { padding: [32, 32] });
+      }, 100);
+    }
   }
 
   /* ── MAP ── */
@@ -489,11 +498,15 @@
     withCoords.forEach(e => {
       const gs = getStyle(e.groupe);
       const hasGroupe = e.groupe && e.groupe.trim() !== '';
-      const markerColor = hasGroupe ? '#A84B2A' : '#2D5A3D';
-      const ring = 'box-shadow:0 1px 3px rgba(0,0,0,0.15);';
+      const isMapToday = e.iso === new Date().toISOString().slice(0, 10);
+      const markerColor = isMapToday ? '#D4A017' : (hasGroupe ? '#A84B2A' : '#2D5A3D');
+      const markerSize = isMapToday ? 14 : 10;
+      const ring = isMapToday
+        ? 'box-shadow:0 0 0 3px #C0603A55,0 0 0 6px #C0603A22,0 2px 6px rgba(0,0,0,0.3);'
+        : 'box-shadow:0 1px 3px rgba(0,0,0,0.15);';
       const icon = L.divIcon({
-        html: `<div style="width:10px;height:10px;border-radius:50%;background:${markerColor};border:2px solid white;${ring}"></div>`,
-        className: '', iconAnchor: [5,5], popupAnchor: [0,-9],
+        html: `<div style="width:${markerSize}px;height:${markerSize}px;border-radius:50%;background:${markerColor};border:2px solid white;${ring}"></div>`,
+        className: '', iconAnchor: [markerSize/2, markerSize/2], popupAnchor: [0, -markerSize/2-4],
       });
       const badge = hasGroupe
         ? `<span class="popup-badge" style="background:${gs.bg};color:${gs.fg}">${gs.label}</span>`
@@ -502,7 +515,8 @@
         .bindPopup(`<div class="popup-ville">${e.ville}</div><div class="popup-date">${e.date||'—'}</div>${badge}${e.km ? `<div class="popup-km">${Math.round(e.km)} km depuis l'étape précédente</div>` : ''}`)
         .addTo(markersLayer);
     });
-    map.fitBounds(L.latLngBounds(latlngs), { padding: [32, 32] });
+    mapBounds = L.latLngBounds(latlngs);
+    map.fitBounds(mapBounds, { padding: [32, 32] });
   }
 
   /* ── MULTISELECT ── */
@@ -661,6 +675,7 @@
     container.innerHTML = '';
     const byDate = {};
     rows.forEach(e => { if (e.iso) byDate[e.iso] = e; });
+    const todayISO = new Date().toISOString().slice(0, 10);
     const months = [
       { y:2026, m:3, label:'Avril 2026' },
       { y:2026, m:4, label:'Mai 2026' },
@@ -705,14 +720,15 @@
         const etape = byDate[iso];
         const inTrip = iso >= '2026-04-27' && iso <= '2026-08-15';
         const cell = document.createElement('div');
+        const isToday = iso === todayISO;
         if (etape && inTrip) {
           const isOff = etape.ville.trim().toUpperCase() === 'OFF';
           const hasGroupe = (etape.groupe||'').trim() !== '';
           if (isOff) {
-            cell.className = 'cal-day off';
+            cell.className = 'cal-day off' + (isToday ? ' today' : '');
             cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${hasGroupe ? etape.groupe : ''}</div>`;
           } else {
-            cell.className = `cal-day has-etape ${hasGroupe ? 'reserve' : 'dispo'}`;
+            cell.className = `cal-day has-etape ${hasGroupe ? 'reserve' : 'dispo'}${isToday ? ' today' : ''}`;
             cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${etape.ville}</div><div class="cal-day-dot"></div>`;
             cell.addEventListener('mouseenter', ev => showTooltip(ev, etape));
             cell.addEventListener('mousemove', ev => moveTooltip(ev));
@@ -720,8 +736,8 @@
             cell.addEventListener('touchstart', ev => { ev.preventDefault(); showTooltipMobile(etape, cell); }, { passive: false });
           }
         } else {
-          cell.className = 'cal-day out-of-trip';
-          cell.innerHTML = `<div class="cal-day-num" style="opacity:${inTrip ? 0.5 : 0.25}">${d}</div>`;
+          cell.className = 'cal-day out-of-trip' + (isToday ? ' today' : '');
+          cell.innerHTML = `<div class="cal-day-num" style="opacity:${inTrip ? 0.5 : 0.25};${isToday ? 'color:var(--terra-mid);font-weight:700;opacity:1' : ''}">${d}</div>`;
         }
         grid.appendChild(cell);
       }
