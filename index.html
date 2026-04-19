@@ -182,9 +182,30 @@
     .cal-day.empty, .cal-day.out-of-trip { background: transparent; }
     .cal-day.today { outline: 2px solid var(--terra-mid); outline-offset: -2px; }
     .cal-day.today .cal-day-num { color: var(--terra-mid) !important; font-weight: 700; }
+    .cal-day.split { padding: 0; overflow: hidden; position: relative; }
+    .cal-day-tri { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 4px 4px 2px; }
+    .cal-day-tri.top { clip-path: polygon(0 0, 100% 0, 0 100%); }
+    .cal-day-tri.bottom { clip-path: polygon(100% 0, 100% 100%, 0 100%); align-items: flex-end; text-align: right; justify-content: flex-end; padding: 2px 4px 4px; }
+    .cal-day-tri.dispo { background: #E8F0EA; }
+    .cal-day-tri.reserve { background: #F5E8E2; }
+    .cal-day-tri.pending { background: #FEF3E2; }
+    .cal-day-tri .cal-day-num { font-size: 10px; font-weight: 500; line-height: 1; }
+    .cal-day-tri.dispo .cal-day-num { color: var(--green-text); }
+    .cal-day-tri.reserve .cal-day-num { color: var(--terra-text); }
+    .cal-day-tri.pending .cal-day-num { color: #92540A; }
+    .cal-day-tri .cal-day-ville { font-size: 8px; line-height: 1.2; max-width: 80%; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .cal-day-tri.top .cal-day-ville { max-width: 55%; }
+    .cal-day-tri.bottom .cal-day-ville { max-width: 55%; }
+    .cal-day-tri.dispo .cal-day-ville { color: var(--green); font-weight: 500; }
+    .cal-day-tri.reserve .cal-day-ville { color: var(--terra); font-weight: 500; }
+    .cal-day-tri.pending .cal-day-ville { color: #B45309; font-weight: 500; }
     .cal-day.off { background: #EEEBE4; }
     .cal-day.off .cal-day-num { color: var(--ink-faint); }
     .cal-day.off .cal-day-ville { color: var(--ink-faint); font-size: 9px; }
+    .cal-day.pending { background: #FEF3E2; }
+    .cal-day.pending .cal-day-num { color: #92540A; }
+    .cal-day.pending .cal-day-ville { color: #B45309; font-weight: 500; }
+    .cal-day.pending .cal-day-dot { background: #D4A017; }
     .cal-day.dispo { background: #E8F0EA; }
     .cal-day.reserve { background: #F5E8E2; }
     .cal-day-num { font-size: 11px; font-weight: 500; color: var(--ink-faint); margin-bottom: 4px; }
@@ -385,7 +406,10 @@
 
   <div class="footer">
     <span>Powered by Cécé</span>
-    <a href="https://www.polarsteps.com/cecebvx/23406404-30-ans-sur-la-via-francigena" target="_blank">Polarsteps →</a>
+    <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+      <a href="https://www.viefrancigene.org/fr/home#mappa" target="_blank">Itinéraire officiel →</a>
+      <a href="https://www.polarsteps.com/cecebvx/23406404-30-ans-sur-la-via-francigena" target="_blank">Polarsteps →</a>
+    </div>
   </div>
 
 </div>
@@ -499,7 +523,8 @@
       const gs = getStyle(e.groupe);
       const hasGroupe = e.groupe && e.groupe.trim() !== '';
       const isMapToday = e.iso === new Date().toISOString().slice(0, 10);
-      const markerColor = isMapToday ? '#D4A017' : (hasGroupe ? '#A84B2A' : '#2D5A3D');
+      const isMapPending = (e.groupe||'').trim().endsWith('?');
+      const markerColor = isMapToday ? '#D4A017' : (isMapPending ? '#D4A017' : (hasGroupe ? '#A84B2A' : '#2D5A3D'));
       const markerSize = isMapToday ? 14 : 10;
       const ring = isMapToday
         ? 'box-shadow:0 0 0 3px #C0603A55,0 0 0 6px #C0603A22,0 2px 6px rgba(0,0,0,0.3);'
@@ -508,9 +533,12 @@
         html: `<div style="width:${markerSize}px;height:${markerSize}px;border-radius:50%;background:${markerColor};border:2px solid white;${ring}"></div>`,
         className: '', iconAnchor: [markerSize/2, markerSize/2], popupAnchor: [0, -markerSize/2-4],
       });
-      const badge = hasGroupe
-        ? `<span class="popup-badge" style="background:${gs.bg};color:${gs.fg}">${gs.label}</span>`
-        : `<span class="popup-badge" style="background:#EDE8DF;color:#A89D8C">Disponible</span>`;
+      const cleanGroupe = (e.groupe||'').trim().replace(/[?]$/, '');
+      const badge = isMapPending
+        ? `<span class="popup-badge" style="background:#FEF3E2;color:#92540A">${cleanGroupe}</span>`
+        : hasGroupe
+          ? `<span class="popup-badge" style="background:${gs.bg};color:${gs.fg}">${gs.label}</span>`
+          : `<span class="popup-badge" style="background:#EDE8DF;color:#A89D8C">Disponible</span>`;
       L.marker([e.lat, e.lng], { icon })
         .bindPopup(`<div class="popup-ville">${e.ville}</div><div class="popup-date">${e.date||'—'}</div>${badge}${e.km ? `<div class="popup-km">${Math.round(e.km)} km depuis l'étape précédente</div>` : ''}`)
         .addTo(markersLayer);
@@ -606,8 +634,9 @@
       if (dateTo && e.iso && e.iso > dateTo) return false;
       const hasGroupe = (e.groupe||'').trim() !== '';
       const isOff = e.ville.trim().toUpperCase() === 'OFF';
+      const isPending = (e.groupe||'').trim().endsWith('?');
       if (dispoState === 'dispo' && (hasGroupe || isOff)) return false;
-      if (dispoState === 'reserve' && (!hasGroupe || isOff)) return false;
+      if (dispoState === 'reserve' && (!hasGroupe || isOff || isPending)) return false;
       return true;
     });
     refreshVilleOptions();
@@ -674,7 +703,11 @@
     if (!container) return;
     container.innerHTML = '';
     const byDate = {};
-    rows.forEach(e => { if (e.iso) byDate[e.iso] = e; });
+    rows.forEach(e => {
+      if (!e.iso) return;
+      if (!byDate[e.iso]) byDate[e.iso] = [];
+      byDate[e.iso].push(e);
+    });
     const todayISO = new Date().toISOString().slice(0, 10);
     const months = [
       { y:2026, m:3, label:'Avril 2026' },
@@ -688,6 +721,7 @@
     leg.innerHTML = `
       <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#E8F0EA;border:1px solid #2D5A3D44"></div>Disponible</div>
       <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#F5E8E2;border:1px solid #A84B2A44"></div>Réservé</div>
+      <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#FEF3E2;border:1px solid #D4A01744"></div>À confirmer</div>
       <div class="cal-legend-item"><div class="cal-legend-dot" style="background:#EEEBE4;border:1px solid #D9D0C044"></div>Pause</div>
     `;
     container.appendChild(leg);
@@ -719,21 +753,58 @@
         const iso = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
         const etape = byDate[iso];
         const inTrip = iso >= '2026-04-27' && iso <= '2026-08-15';
+        const etapes = byDate[iso] || [];
         const cell = document.createElement('div');
         const isToday = iso === todayISO;
-        if (etape && inTrip) {
-          const isOff = etape.ville.trim().toUpperCase() === 'OFF';
-          const hasGroupe = (etape.groupe||'').trim() !== '';
-          if (isOff) {
+
+        function getEtapeClass(e) {
+          const isPend = (e.groupe||'').trim().endsWith('?');
+          const hasG = (e.groupe||'').trim() !== '';
+          return isPend ? 'pending' : (hasG ? 'reserve' : 'dispo');
+        }
+
+        if (etapes.length > 0 && inTrip) {
+          const firstOff = etapes[0].ville.trim().toUpperCase() === 'OFF';
+
+          if (firstOff) {
+            // Cas OFF
             cell.className = 'cal-day off' + (isToday ? ' today' : '');
-            cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${hasGroupe ? etape.groupe : ''}</div>`;
+            const groupeLabel = (etapes[0].groupe||'').trim().replace(/\?$/, '');
+            cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${groupeLabel}</div>`;
+
+          } else if (etapes.length >= 2) {
+            // Cas double étape — case splitée
+            cell.className = 'cal-day split' + (isToday ? ' today' : '');
+            const positions = ['top', 'bottom'];
+            etapes.slice(0, 2).forEach((e, i) => {
+              const cl = getEtapeClass(e);
+              const groupeLabel = (e.groupe||'').trim().replace(/\?$/, '');
+              const tri = document.createElement('div');
+              tri.className = `cal-day-tri ${positions[i]} ${cl}`;
+              if (i === 0) {
+                tri.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${e.ville}</div>`;
+              } else {
+                tri.innerHTML = `<div class="cal-day-ville">${e.ville}</div>`;
+              }
+              tri.addEventListener('mouseenter', ev => showTooltip(ev, {...e, groupe: groupeLabel}));
+              tri.addEventListener('mousemove', ev => moveTooltip(ev));
+              tri.addEventListener('mouseleave', hideTooltip);
+              tri.addEventListener('touchstart', ev => { ev.preventDefault(); showTooltipMobile({...e, groupe: groupeLabel}, cell); }, { passive: false });
+              cell.appendChild(tri);
+            });
+
           } else {
-            cell.className = `cal-day has-etape ${hasGroupe ? 'reserve' : 'dispo'}${isToday ? ' today' : ''}`;
-            cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${etape.ville}</div><div class="cal-day-dot"></div>`;
-            cell.addEventListener('mouseenter', ev => showTooltip(ev, etape));
+            // Cas normal — une seule étape
+            const e = etapes[0];
+            const isPending = (e.groupe||'').trim().endsWith('?');
+            const hasGroupe = (e.groupe||'').trim() !== '';
+            const groupeLabel = (e.groupe||'').trim().replace(/\?$/, '');
+            cell.className = `cal-day has-etape ${getEtapeClass(e)}${isToday ? ' today' : ''}`;
+            cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${e.ville}</div><div class="cal-day-dot"></div>`;
+            cell.addEventListener('mouseenter', ev => showTooltip(ev, {...e, groupe: groupeLabel}));
             cell.addEventListener('mousemove', ev => moveTooltip(ev));
             cell.addEventListener('mouseleave', hideTooltip);
-            cell.addEventListener('touchstart', ev => { ev.preventDefault(); showTooltipMobile(etape, cell); }, { passive: false });
+            cell.addEventListener('touchstart', ev => { ev.preventDefault(); showTooltipMobile({...e, groupe: groupeLabel}, cell); }, { passive: false });
           }
         } else {
           cell.className = 'cal-day out-of-trip' + (isToday ? ' today' : '');
@@ -752,9 +823,13 @@
 
   function showTooltip(ev, etape) {
     const gs = getStyle(etape.groupe);
-    const hasGroupe = (etape.groupe||'').trim() !== '';
-    const badgeStyle = hasGroupe ? `background:${gs.bg};color:${gs.fg}` : 'background:#EDE8DF;color:#A89D8C';
-    tooltip.innerHTML = `<div class="tt-ville">${etape.ville}</div><div>${etape.date||''}</div>${etape.km ? `<div>${Math.round(etape.km)} km</div>` : ''}<span class="tt-badge" style="${badgeStyle}">${hasGroupe ? gs.label : 'Disponible'}</span>`;
+    const rawGroupe = (etape.groupe||'').trim();
+    const hasGroupe = rawGroupe !== '';
+    const isPendingTip = rawGroupe.endsWith('?');
+    const cleanLabel = rawGroupe.replace(/[?]$/, '');
+    const badgeStyle = isPendingTip ? 'background:#FEF3E2;color:#92540A' : (hasGroupe ? `background:${gs.bg};color:${gs.fg}` : 'background:#EDE8DF;color:#A89D8C');
+    const badgeLabel = isPendingTip ? `${cleanLabel}` : (hasGroupe ? gs.label : 'Disponible');
+    tooltip.innerHTML = `<div class="tt-ville">${etape.ville}</div><div>${etape.date||''}</div>${etape.km ? `<div>${Math.round(etape.km)} km</div>` : ''}<span class="tt-badge" style="${badgeStyle}">${badgeLabel}</span>`;
     tooltip.style.display = 'block';
     moveTooltip(ev);
   }
