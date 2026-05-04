@@ -328,7 +328,7 @@
   const SHEET_ID = '1D62yVNvtDb4CjFZKI-X1Zud_Ka5MWPE534Yv4y1hNMM';
   const SHEET_NAME = 'Sheet1';
   const GVZ = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
-  const DEPART = new Date('2026-04-27T08:30:00');
+  let DEPART = null;
 
   const PALETTE = [
     { dot:'#2D5A3D', bg:'#E4EEE7', fg:'#1E3D28' },
@@ -355,6 +355,7 @@
 
   /* ── COUNTDOWN ── */
   function renderCountdown() {
+    if (!DEPART) return;
     const now = new Date();
     const diff = DEPART - now;
     const el = document.getElementById('countdown-block');
@@ -801,8 +802,6 @@
   }
 
   /* ── INIT ── */
-  renderCountdown();
-  setInterval(renderCountdown, 1000);
   initMap();
 
   fetch(GVZ)
@@ -823,6 +822,15 @@
           lng:    c[6] ? parseFloat(String(c[6].f ?? c[6].v ?? '').replace(',', '.')) || null : null,
         };
       }).filter(e => e.ville && e.ville.trim() !== '');
+      // Première date du Sheet → départ
+      const firstIso = json.table.rows
+        .map(row => { const c = row.c; return parseSheetDate(c[0]).iso; })
+        .find(iso => !!iso);
+      if (firstIso) {
+        DEPART = new Date(firstIso + 'T00:00:00');
+        renderCountdown();
+        setInterval(renderCountdown, 1000);
+      }
       filteredData = [...allData];
       const groups = [...new Set(allData.map(e => (e.groupe||'').trim()).filter(Boolean))];
       const pays   = [...new Set(allData.map(e => (e.pays||'').trim()).filter(Boolean))];
