@@ -618,18 +618,20 @@
           lat:    c[5] ? parseFloat(String(c[5].f ?? c[5].v ?? '').replace(',', '.')) || null : null,
           lng:    c[6] ? parseFloat(String(c[6].f ?? c[6].v ?? '').replace(',', '.')) || null : null,
         };
-      }).filter(e => e.ville && e.ville.trim() !== '');
+      }).filter(e => e.iso && (e.ville.trim() !== '' || (e.groupe||'').trim() !== ''));
       const firstIso = json.table.rows.map(row => { const c = row.c; return parseSheetDate(c[0]).iso; }).find(iso => !!iso);
       if (firstIso) { DEPART = new Date(firstIso + 'T00:00:00'); renderCountdown(); setInterval(renderCountdown, 1000); }
       filteredData = [...allData];
+      // Pour table et carte : exclure les lignes sans ville
+      const dataAvecVille = allData.filter(e => e.ville && e.ville.trim() !== '' && e.ville.trim().toUpperCase() !== 'OFF');
       const groups = [...new Set(allData.map(e => (e.groupe||'').trim()).filter(Boolean))];
-      const pays   = [...new Set(allData.map(e => (e.pays||'').trim()).filter(Boolean))];
-      const villes = [...new Set(allData.map(e => (e.ville||'').trim()).filter(Boolean))];
+      const pays   = [...new Set(dataAvecVille.map(e => (e.pays||'').trim()).filter(Boolean))];
+      const villes = [...new Set(dataAvecVille.map(e => (e.ville||'').trim()).filter(Boolean))];
       groups.forEach(g => getStyle(g));
       buildMultiSelect('ms-groupe', groups, 'groupe');
       buildMultiSelect('ms-pays', pays, 'pays');
       buildMultiSelect('ms-ville', villes, 'ville');
-      renderTable(allData); renderMap(allData); renderCalendar(allData);
+      renderTable(dataAvecVille); renderMap(dataAvecVille); renderCalendar(allData);
     })
     .catch(err => {
       console.error('Sheets fetch error:', err);
