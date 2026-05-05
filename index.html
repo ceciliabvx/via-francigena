@@ -536,7 +536,8 @@
             const hasVille = e.ville && e.ville.trim() !== '';
             const hasGroupe = (e.groupe||'').trim() !== '';
             if (!hasVille && hasGroupe) {
-              cell.className = 'cal-day reserve' + (isToday ? ' today' : '');
+              // groupe sans lieu → réservé ou en attente selon ?
+              cell.className = `cal-day ${cl}` + (isToday ? ' today' : '');
               cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-dot"></div>`;
             } else {
               cell.className = `cal-day has-etape ${cl}${isToday ? ' today' : ''}`;
