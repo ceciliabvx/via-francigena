@@ -85,6 +85,7 @@
 .cal-day.has-etape:hover { border-color: var(--border); }
 .cal-day.empty, .cal-day.out-of-trip { background: transparent; }
 .cal-day.today { outline: 2px solid var(--terra-mid); outline-offset: -2px; }
+.cal-day.active { outline: 2px solid var(--ink-faint); outline-offset: -2px; }
 .cal-day.today .cal-day-num { color: var(--terra-mid) !important; font-weight: 700; }
 .cal-day.split { padding: 0; overflow: hidden; position: relative; }
 .cal-day-tri { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 4px 4px 2px; }
@@ -139,6 +140,15 @@
 .bs-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .bs-date { font-size: 13px; color: var(--ink-faint); }
 .bs-km { font-size: 13px; color: var(--ink-faint); }
+.bs-badge { display: inline-block; font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 99px; }
+.bs-handle { width: 36px; height: 4px; border-radius: 99px; background: var(--border); margin: 12px auto 20px; }
+.bs-body { padding: 0 20px; }
+.bs-ville { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+.bs-ville.no-ville { font-size: 16px; font-style: italic; color: var(--ink-faint); }
+.bs-meta { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.bs-date { font-size: 13px; color: var(--ink-faint); }
+.bs-km { font-size: 13px; color: var(--ink-faint); }
+.bs-km::before { content: '·'; margin-right: 12px; color: var(--border); }
 .bs-badge { display: inline-block; font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 99px; }
 .bs-close { position: absolute; top: 14px; right: 16px; width: 28px; height: 28px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ink-faint); }
 
@@ -557,7 +567,7 @@
               tri.addEventListener('mouseenter', ev => showTooltip(ev, {...e, groupe: groupeLabel}));
               tri.addEventListener('mousemove', ev => moveTooltip(ev));
               tri.addEventListener('mouseleave', hideTooltip);
-              tri.addEventListener('touchstart', ev => { ev.preventDefault(); showTooltipMobile({...e, groupe: groupeLabel}, cell); }, { passive: false });
+              tri.addEventListener('touchstart', ev => { ev.preventDefault(); openBs({...e, groupe: groupeLabel}, cell); }, { passive: false });
               cell.appendChild(tri);
             });
           } else if (etapes.length === 1) {
@@ -569,13 +579,15 @@
               // groupe sans lieu → réservé ou en attente selon ?
               cell.className = `cal-day ${cl}` + (isToday ? ' today' : '');
               cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-dot"></div>`;
+              cell.addEventListener('touchstart', ev => { ev.preventDefault(); openBs({...e, groupe: groupeLabel}, cell); }, { passive: false });
+              cell.addEventListener('click', () => openBs({...e, groupe: groupeLabel}, cell));
             } else {
               cell.className = `cal-day has-etape ${cl}${isToday ? ' today' : ''}`;
               cell.innerHTML = `<div class="cal-day-num">${d}</div><div class="cal-day-ville">${e.ville}</div><div class="cal-day-dot"></div>`;
               cell.addEventListener('mouseenter', ev => showTooltip(ev, {...e, groupe: groupeLabel}));
               cell.addEventListener('mousemove', ev => moveTooltip(ev));
               cell.addEventListener('mouseleave', hideTooltip);
-              cell.addEventListener('touchstart', ev => { ev.preventDefault(); showTooltipMobile({...e, groupe: groupeLabel}, cell); }, { passive: false });
+              cell.addEventListener('touchstart', ev => { ev.preventDefault(); openBs({...e, groupe: groupeLabel}, cell); }, { passive: false });
             }
           } else {
             cell.className = 'cal-day dispo' + (isToday ? ' today' : '');
@@ -605,17 +617,41 @@
     tooltip.style.display = 'block'; moveTooltip(ev);
   }
   function moveTooltip(ev) { tooltip.style.left = (ev.clientX + 12) + 'px'; tooltip.style.top = (ev.clientY + 12) + 'px'; }
-  function showTooltipMobile(etape, cell) {
-    document.querySelectorAll('.cal-day-mobile-info').forEach(el => el.remove());
-    const gs = getStyle(etape.groupe);
-    const hasGroupe = (etape.groupe||'').trim() !== '';
-    const badgeStyle = hasGroupe ? `background:${gs.bg};color:${gs.fg}` : 'background:#EDE8DF;color:#A89D8C';
-    const info = document.createElement('div'); info.className = 'cal-day-mobile-info';
-    info.style.cssText = 'grid-column:1/-1;background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--ink-muted);display:flex;gap:10px;align-items:center;flex-wrap:wrap;';
-    info.innerHTML = `<span style="font-weight:500;color:var(--ink)">${etape.ville}</span><span>${etape.date||''}</span>${etape.km ? `<span>${Math.round(etape.km)} km</span>` : ''}<span class="tt-badge" style="${badgeStyle}">${hasGroupe ? gs.label : 'Disponible'}</span>`;
-    cell.parentNode.insertBefore(info, cell.nextSibling);
-    setTimeout(() => { document.addEventListener('touchstart', () => { info.remove(); }, { once: true }); }, 100);
+  /* ── BOTTOM SHEET ── */
+  let bsActiveCell = null;
+  function openBs(etape, cell) {
+    if (bsActiveCell) bsActiveCell.classList.remove('active');
+    bsActiveCell = cell; cell.classList.add('active');
+    const rawGroupe = (etape.groupe||'').trim();
+    const isPending = rawGroupe.endsWith('?');
+    const groupe = rawGroupe.replace(/[?]$/, '');
+    const gs = getStyle(rawGroupe);
+    // Ville
+    const villeEl = document.getElementById('bs-ville');
+    if (etape.ville && etape.ville.trim()) {
+      villeEl.textContent = etape.ville; villeEl.className = 'bs-ville';
+    } else {
+      villeEl.textContent = 'Étape à définir'; villeEl.className = 'bs-ville no-ville';
+    }
+    // Date + km
+    document.getElementById('bs-date').textContent = etape.date || '';
+    const kmEl = document.getElementById('bs-km');
+    if (etape.km) { kmEl.textContent = Math.round(etape.km) + ' km'; kmEl.style.display = ''; }
+    else { kmEl.textContent = ''; kmEl.style.display = 'none'; }
+    // Badge
+    const badge = document.getElementById('bs-badge');
+    if (isPending && groupe) { badge.textContent = groupe + ' · à confirmer'; badge.style.background = '#FEF3E2'; badge.style.color = '#92540A'; }
+    else if (groupe) { badge.textContent = groupe; badge.style.background = gs.bg; badge.style.color = gs.fg; }
+    else { badge.textContent = 'Disponible'; badge.style.background = '#E8F0EA'; badge.style.color = '#1E3D28'; }
+    document.getElementById('bs-overlay').classList.add('open');
+    document.getElementById('bs-sheet').classList.add('open');
   }
+  function closeBs() {
+    if (bsActiveCell) { bsActiveCell.classList.remove('active'); bsActiveCell = null; }
+    document.getElementById('bs-overlay').classList.remove('open');
+    document.getElementById('bs-sheet').classList.remove('open');
+  }
+  function showTooltipMobile(etape, cell) { openBs(etape, cell); }
   function hideTooltip() { tooltip.style.display = 'none'; }
 
   /* ── PARSE DATE ── */
